@@ -1,7 +1,36 @@
 use anyhow::Result;
-use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
+use headless_chrome::{Browser, Element, LaunchOptionsBuilder, Tab};
 use std::fs::File;
+use std::io::{copy, Cursor};
+use std::time::Duration;
 use std::{sync::Arc, thread, time};
+
+// const url: &str = "https://www.spglobal.com/commodityinsights/PlattsContent/_assets/_files/en/our-methodology/methodology-specifications/faq-singapore-implied.pdf";
+
+// async fn download_image_to(file_name: &str) -> Result<()> {
+//     // Send an HTTP GET request to the URL
+//     let response = reqwest::get(url).await?;
+//     // Create a new file to write the downloaded image to
+//     let mut file = File::create(file_name)?;
+    
+//     // Create a cursor that wraps the response body
+//     let mut content =  Cursor::new(response.bytes().await?);
+//     // Copy the content from the cursor to the file
+//     copy(&mut content, &mut file)?;
+
+//     Ok(())
+// }
+
+// #[tokio::main]
+// async fn main() -> Result<()> {
+//     // let image_url = "https://www.rust-lang.org/static/images/rust-logo-blk.svg";
+//     let file_name = "1.pdf";
+//     match download_image_to(file_name).await {
+//         Ok(_) => println!("image saved successfully"),
+//         Err(e) => println!("error while downloading image: {}", e),
+//     }
+//     Ok(())
+// }
 
 fn main() {
     let mut commodites: Vec<Commodity> = Vec::new();
@@ -80,28 +109,67 @@ fn open_tab(commodity: &Commodity) {
 
     let html_tag_a = tab.wait_for_elements("a.link").unwrap();
 
+    let mut file_names: Vec<String> = Vec::new();
+
     for a in html_tag_a {
-        let href = a.get_attribute_value("href").unwrap().unwrap();
-        let mut href_split_dot = &href.split('.');
+        let href_attr = a.get_attribute_value("href").unwrap().unwrap();
+        
+        let href_split_path = &href_attr.split("/");
+        let href_split_dot = href_split_path.clone().last().unwrap().split(".");
+        
         if href_split_dot.clone().last() == Some(&"pdf")
             || href_split_dot.clone().last() == Some(&"xlsx")
         {
-            let href_split_path = href.split("/");
-            let file_name = href_split_path.last().unwrap();
+            // let file_name = href_split_path.clone().last().unwrap();
 
-            match save_file(&href, file_name) {
-                Ok(_) => println!("image saved successfully"),
-                Err(e) => println!("error while downloading image: {}", e),
+            if !file_names.contains(&href_attr){
+                file_names.push(href_attr);
+
+                let _ = excute_js(a);
             }
+
+        //     // match save_file(&href, file_name) {
+        //     //     Ok(_) => println!("image saved successfully"),
+        //     //     Err(e) => println!("error while downloading image: {}", e),
+        //     // }
         }
     }
 
     create_screenshort(tab, commodity.title.clone() + ".png");
 }
 
+fn excute_js(elem: Element<'_>) -> Result<(), Box<dyn std::error::Error>> {
+    // Run JavaScript in the page
+    let remote_object = elem.call_js_fn(r#"
+        function getIdTwice () {
+            // `this` is always the element that you called `call_js_fn` on
+            
+            const path = this.href.split("/");
+
+            this.setAttribute("download", path[path.length-1]);  
+            this.click();
+            
+            //return true;
+        }
+    "#, vec![], false)?;
+    // match remote_object.value {
+    //     Some(returned_string) => {
+    //         dbg!(&returned_string);
+    //         // assert_eq!(returned_string, "firstHeadingfirstHeading".to_string());
+    //     }
+    //     _ => unreachable!()
+    // };
+    Ok(())
+}
+
 fn save_file(target: &str, file_name: &str) -> Result<()> {
-    let mut file = File::create(file_name)?;
-    let mut file_len = reqwest::blocking::get(target)?.copy_to(&mut file)?;
+    let _ = File::create(file_name)?;
+
+    let client = reqwest::blocking::Client::builder()
+    .timeout(Duration::from_secs(10))
+    .build()?;
+    let  _ = client.get(target);//.copy_to(&mut file);
+    //let mut file_len = reqwest::blocking::get(target)?.copy_to(&mut file)?;
 
     Ok(())
 }
