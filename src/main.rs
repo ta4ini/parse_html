@@ -100,20 +100,8 @@ fn open_tab(commodity: &Commodity) {
 }
 
 fn save_file(target: &str, file_name: &str) -> Result<()> {
-    // let tmp_dir = Builder::new().prefix("example").tempdir()?;
-    // let target = "https://www.rust-lang.org/logos/rust-logo-512x512.png";
     let mut file = File::create(file_name)?;
     let mut file_len = reqwest::blocking::get(target)?.copy_to(&mut file)?;
-    // let file_name = response
-    //         .url()
-    //         .path_segments()
-    //         .and_then(|segments| segments.last())
-    //         .and_then(|name| if name.is_empty() { None } else { Some(name) })
-    //         .unwrap_or("tmp.bin");
-    // Create a new file to write the downloaded image to
-
-    // Copy the contents of the response to the file
-    //copy(&mut response, &mut file)?;
 
     Ok(())
 }
