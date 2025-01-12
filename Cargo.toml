@@ -1,0 +1,9 @@
+[package]
+name = "files_download_from_site"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+headless_chrome = "1.0.15"
+reqwest = { version = "0.12.12", features = ["blocking"] }
